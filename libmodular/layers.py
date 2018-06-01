@@ -11,6 +11,7 @@ def create_dense_modules(inputs_or_shape, module_count: int, units: int = None, 
             weights_shape = [module_count, inputs_or_shape.shape[-1].value, units]
         else:
             weights_shape = [module_count] + inputs_or_shape
+            units = inputs_or_shape[-1]
         weights = tf.get_variable('weights', weights_shape)
         biases_shape = [module_count, units]
         biases = tf.get_variable('biases', biases_shape, initializer=tf.zeros_initializer())
