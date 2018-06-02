@@ -6,7 +6,7 @@ from libmodular.modular import run_modules, e_step, m_step, evaluation
 
 
 def create_dense_modules(inputs_or_shape, module_count: int, units: int = None, activation=None):
-    with tf.variable_scope('dense_modules'):
+    with tf.variable_scope(None, 'dense_modules'):
         if hasattr(inputs_or_shape, 'shape') and units is not None:
             weights_shape = [module_count, inputs_or_shape.shape[-1].value, units]
         else:
@@ -26,7 +26,7 @@ def create_dense_modules(inputs_or_shape, module_count: int, units: int = None, 
 
 
 def modular_layer(inputs, modules: ModulePool, parallel_count: int, context: ModularContext):
-    with tf.variable_scope('modular_layer'):
+    with tf.variable_scope(None, 'modular_layer'):
         inputs = context.begin_modular(inputs)
 
         logits = tf.layers.dense(inputs, modules.module_count * parallel_count)

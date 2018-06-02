@@ -34,8 +34,11 @@ def run():
     data_indices = tf.placeholder(tf.int32, [None], 'data_indices')
 
     def network(context: modular.ModularContext):
-        modules = modular.create_dense_modules(inputs, module_count=10, units=10)
-        logits = modular.modular_layer(inputs, modules, parallel_count=1, context=context)
+        modules = modular.create_dense_modules(inputs, module_count=10, units=32)
+        hidden = modular.modular_layer(inputs, modules, parallel_count=1, context=context)
+
+        modules = modular.create_dense_modules(hidden, module_count=8, units=10)
+        logits = modular.modular_layer(hidden, modules, parallel_count=1, context=context)
 
         target = modular.modularize_target(labels, context)
         loglikelihood = tf.distributions.Categorical(logits).log_prob(target)
