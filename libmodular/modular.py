@@ -5,6 +5,7 @@ import libmodular.tensor_utils as tensor_utils
 
 import tensorflow as tf
 
+M_STEP_SUMMARIES = 'M_STEP_SUMMARIES'
 ModularMode = Enum('ModularMode', 'E_STEP M_STEP EVALUATION')
 ModularLayerAttributes = namedtuple('ModularLayerAttributes', ['selection', 'best_selection', 'controller'])
 ModulePool = namedtuple('ModulePool', ['module_count', 'module_fnc', 'output_shape'])
@@ -50,7 +51,13 @@ class ModularContext:
 
 def run_modules(inputs, selection, module_fnc, output_shape):
     batch_size = tf.shape(inputs)[0]
-    output_shape = [batch_size] + output_shape
+    if output_shape is not None:
+        output_shape = [batch_size] + output_shape
+    else:
+        # This is the only way I am aware of to get the output shape easily
+        dummy = module_fnc(inputs, 0)
+        output_shape = [batch_size] + dummy.shape[1:].as_list()
+
     used_modules, _ = tf.unique(tf.reshape(selection, (-1,)))
 
     def compute_module(accum, module):
@@ -68,11 +75,15 @@ def run_modules(inputs, selection, module_fnc, output_shape):
 def e_step(template, sample_size, dataset_size, data_indices):
     context = ModularContext(ModularMode.E_STEP, data_indices, dataset_size, sample_size)
 
+    # batch_size * sample_size
     loglikelihood = template(context)[0]
-    selection_logprob = context.selection_logprob()
+    assert loglikelihood.shape.ndims == 1
 
-    shape = [sample_size, -1] + loglikelihood.shape[1:].as_list()
-    logprob = tf.reshape(loglikelihood + selection_logprob, shape)
+    # batch_size * sample_size
+    selection_logprob = context.selection_logprob()
+    assert selection_logprob.shape.ndims == 1
+
+    logprob = tf.reshape(loglikelihood + selection_logprob, [sample_size, -1])
     best_selection_indices = tf.stop_gradient(tf.argmax(logprob, axis=0))
 
     return context.update_best_selection(best_selection_indices)
@@ -85,8 +96,13 @@ def m_step(template, optimizer, dataset_size, data_indices):
 
     ctrl_objective = -tf.reduce_mean(selection_logprob)
     module_objective = -tf.reduce_mean(loglikelihood)
+    joint_objective = ctrl_objective + module_objective
 
-    return optimizer.minimize(ctrl_objective + module_objective)
+    tf.summary.scalar('ctrl_objective', ctrl_objective, collections=[M_STEP_SUMMARIES])
+    tf.summary.scalar('module_objective', module_objective, collections=[M_STEP_SUMMARIES])
+    tf.summary.scalar('joint_objective', joint_objective, collections=[M_STEP_SUMMARIES])
+
+    return optimizer.minimize(joint_objective)
 
 
 def evaluation(template):
@@ -94,3 +110,5 @@ def evaluation(template):
     return template(context)
 
 
+def create_m_step_summaries():
+    return tf.summary.merge_all(key=M_STEP_SUMMARIES)

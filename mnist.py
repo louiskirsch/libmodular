@@ -5,6 +5,8 @@ import numpy as np
 import libmodular as modular
 import observations
 
+from libmodular.modular import create_m_step_summaries
+
 
 def generator(arrays, batch_size):
     """Generate batches, one with respect to each array's first axis."""
@@ -36,6 +38,7 @@ def run():
     def network(context: modular.ModularContext):
         modules = modular.create_dense_modules(inputs, module_count=10, units=32)
         hidden = modular.modular_layer(inputs, modules, parallel_count=1, context=context)
+        hidden = tf.nn.relu(hidden)
 
         modules = modular.create_dense_modules(hidden, module_count=8, units=10)
         logits = modular.modular_layer(hidden, modules, parallel_count=1, context=context)
@@ -66,7 +69,8 @@ def run():
         time = '{:%Y-%m-%d_%H:%M:%S}'.format(datetime.datetime.now())
         writer = tf.summary.FileWriter(f'logs/train_{time}')
         test_writer = tf.summary.FileWriter(f'logs/test_{time}')
-        summaries = tf.summary.merge_all()
+        general_summaries = tf.summary.merge_all()
+        m_step_summaries = tf.summary.merge([create_m_step_summaries(), general_summaries])
         sess.run(tf.global_variables_initializer())
 
         batches = generator([x_train, y_train, np.arange(dataset_size)], 32)
@@ -77,11 +81,12 @@ def run():
                 data_indices: indices
             }
             step = e_step if i % 10 == 0 else m_step
+            summaries = m_step_summaries if step == m_step else general_summaries
             _, summary_data = sess.run([step, summaries], feed_dict)
             writer.add_summary(summary_data, global_step=i)
             if i % 100 == 0:
                 test_feed_dict = {inputs: x_test, labels: y_test}
-                summary_data = sess.run(summaries, test_feed_dict)
+                summary_data = sess.run(general_summaries, test_feed_dict)
                 test_writer.add_summary(summary_data, global_step=i)
         writer.close()
         test_writer.close()
