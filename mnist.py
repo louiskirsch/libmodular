@@ -67,8 +67,8 @@ def run():
 
     with tf.Session() as sess:
         time = '{:%Y-%m-%d_%H:%M:%S}'.format(datetime.datetime.now())
-        writer = tf.summary.FileWriter(f'logs/train_{time}')
-        test_writer = tf.summary.FileWriter(f'logs/test_{time}')
+        writer = tf.summary.FileWriter('logs/train_{}'.format(time))
+        test_writer = tf.summary.FileWriter('logs/test_{}'.format(time))
         general_summaries = tf.summary.merge_all()
         m_step_summaries = tf.summary.merge([create_m_step_summaries(), general_summaries])
         sess.run(tf.global_variables_initializer())

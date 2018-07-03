@@ -1,6 +1,5 @@
 from collections import namedtuple
 from enum import Enum
-from typing import List
 import libmodular.tensor_utils as tensor_utils
 
 import tensorflow as tf
@@ -19,7 +18,7 @@ class ModularContext:
         self.dataset_size = dataset_size
         self.sample_size = sample_size
         self.e_step_samples = False
-        self.layers: List[ModularLayerAttributes] = []
+        self.layers = []
 
     def begin_modular(self, inputs):
         if self.mode == ModularMode.E_STEP and not self.e_step_samples:
